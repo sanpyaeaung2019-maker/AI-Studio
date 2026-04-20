@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Scene Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Padauk:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Padauk', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.5); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.8); }
+
+        .loader {
+            border: 4px solid rgba(99, 102, 241, 0.2);
+            border-left-color: #6366f1;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-small {
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-left-color: #10b981;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="selection:bg-indigo-500/30">
+
+    <!-- Header -->
+    <header class="bg-slate-900/50 backdrop-blur-md sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-5xl mx-auto p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3 text-indigo-400">
+                <div class="p-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
+                </div>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">AI Scene Studio</h1>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-2" id="stepper">
+                <!-- Stepper will be dynamically updated -->
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 py-8" id="app-container">
+        
+        <div id="error-message" class="hidden bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl mb-6 flex justify-between items-center shadow-lg shadow-red-500/5 fade-in">
+            <div class="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                <span class="font-medium" id="error-text"></span>
+            </div>
+            <button onclick="hideError()" class="hover:bg-red-500/20 p-1.5 rounded-lg transition-colors">✕</button>
+        </div>
+
+        <!-- View 1: Input -->
+        <div id="view-1" class="space-y-6 fade-in">
+            <div class="bg-slate-800/50 backdrop-blur-sm p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-700/50 relative overflow-hidden">
+                
+                <div id="loading-1" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-md flex-col items-center justify-center z-10">
+                    <div class="loader"></div>
+                    <p class="mt-4 text-lg font-medium text-indigo-200 animate-pulse" id="loading-text-1">ဇာတ်ညွှန်း ရေးသားနေပါသည်...</p>
+                </div>
+
+                <div class="mb-8">
+                    <label class="text-lg font-semibold mb-3 flex items-center gap-2 text-indigo-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+                        ဇာတ်လမ်းအကြမ်းဖျင်းရေးရန်
+                    </label>
+                    <textarea id="storyInput" class="w-full h-40 bg-slate-900/50 border border-slate-700 rounded-2xl p-5 text-slate-200 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none resize-none placeholder-slate-500 transition-all text-lg leading-relaxed shadow-inner" placeholder="ဥပမာ - ရွာတစ်ရွာမှာရှိတဲ့ ကြောက်စရာကောင်းတဲ့ အိမ်ပျက်ကြီးထဲ ဝင်သွားတဲ့ ကောင်လေးတစ်ယောက်အကြောင်း (ခြောက်ခြားစရာ အသံတွေပါမယ်)..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="space-y-3">
+                        <label class="text-sm font-medium text-slate-400">ဇာတ်လမ်းအရှည် (Scenes)</label>
+                        <select id="durationSelect" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3.5 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer text-slate-200">
+                            <option value="short">ဇာတ်လမ်းတို (5 ခန်း)</option>
+                            <option value="medium">ဇာတ်လမ်းလတ် (10 ခန်း)</option>
+                            <option value="long">ဇာတ်လမ်းရှည် (15 ခန်း)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <label class="text-sm font-medium text-slate-400">ဗီဒီယို အရွယ်အစား (Format)</label>
+                        <select id="formatSelect" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3.5 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer text-slate-200">
+                            <option value="tiktok">TikTok/Reels (9:16)</option>
+                            <option value="youtube">YouTube (16:9)</option>
+                            <option value="facebook">Facebook (1:1)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-3 mb-8">
+                    <label class="text-sm font-medium text-slate-400">စကားပြောအသံ (Voiceover)</label>
+                    <div id="voiceOptions" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <button onclick="handleGenerateScript()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/25 text-lg hover:shadow-indigo-500/40 transform hover:-translate-y-0.5">
+                    ဇာတ်ညွှန်း စတင်ရေးသားမည်
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- View 2: Script Review -->
+        <div id="view-2" class="hidden space-y-6 fade-in">
+            <div class="bg-slate-800/50 backdrop-blur-sm p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-700/50 relative overflow-hidden">
+                
+                <div id="loading-2" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-md flex-col items-center justify-center z-20">
+                    <div class="loader"></div>
+                    <p class="mt-4 text-lg font-medium text-indigo-200 animate-pulse" id="loading-text-2">ရုပ်ထွက်နှင့် အသံများ ဖန်တီးနေပါသည်...</p>
+                </div>
+
+                <h2 id="scriptTitle" class="text-2xl font-bold mb-6 text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text"></h2>
+                
+                <div id="scenesContainer" class="space-y-4 max-h-[60vh] overflow-y-auto pr-3 custom-scrollbar">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <button onclick="showView(1)" class="px-6 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold border border-slate-700 transition-all text-slate-200">
+                    နောက်သို့
+                </button>
+                <button onclick="handleGenerateAssets()" class="flex-1 py-4 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 transition-all transform hover:-translate-y-0.5">
+                    ရုပ်ထွက်နှင့် အသံများ ဖန်တီးမည်
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- View 3: Scene Previews & Download -->
+        <div id="view-3" class="hidden space-y-6 fade-in">
+            <div class="bg-slate-800/50 backdrop-blur-sm p-6 rounded-3xl shadow-xl border border-slate-700/50 relative">
+                
+                <div class="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-700/50 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-indigo-300">အခန်းများ အဆင်သင့်ဖြစ်ပါပြီ</h2>
+                        <p class="text-sm text-slate-400 mt-1">Play ခလုတ်ကိုနှိပ်၍ နမူနာကြည့်ရှုနိုင်ပြီး၊ နှစ်သက်ပါက Video အဖြစ် ဒေါင်းလုဒ်လုပ်နိုင်ပါသည်။</p>
+                    </div>
+                    <button onclick="resetApp()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg font-medium flex items-center gap-2 transition-colors border border-slate-700 text-sm text-slate-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        အသစ်ပြန်စမည်
+                    </button>
+                </div>
+
+                <div id="finalScenesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Global Audio Player for Voice Previews -->
+    <audio id="globalAudioPlayer" class="hidden"></audio>
+
+    <script>
+        const apiKey = ""; // API Key နေရာ
+
+        const MALE_VOICES = [
+            { id: 'Fenrir', name: 'ခန့်ညားသောအသံ (Fenrir)' },
+            { id: 'Orus', name: 'တည်ကြည်သောအသံ (Orus)' },
+            { id: 'Iapetus', name: 'နက်ရှိုင်းသောအသံ (Iapetus)' },
+            { id: 'Enceladus', name: 'ရှင်းလင်းသောအသံ (Enceladus)' },
+            { id: 'Algieba', name: 'တက်ကြွသောအသံ (Algieba)' },
+            { id: 'Rasalgethi', name: 'ပုံပြင်ပြောသူအသံ (Rasalgethi)' }
+        ];
+
+        const VIDEO_FORMATS = {
+            tiktok: { width: 1080, height: 1920 },
+            youtube: { width: 1920, height: 1080 },
+            facebook: { width: 1080, height: 1080 }
+        };
+
+        const DURATIONS = {
+            "short": { words: 300, scenes: 5 },
+            "medium": { words: 700, scenes: 10 },
+            "long": { words: 1200, scenes: 15 }
+        };
+
+        const SFX_LIBRARY = {
+            "none": { name: "အသံမပါ", url: "" },
+            "dog_bark": { name: "ခွေးဟောင်သံ", url: "https://actions.google.com/sounds/v1/animals/dog_barking.ogg" },
+            "wind": { name: "လေတိုက်သံ", url: "https://actions.google.com/sounds/v1/weather/strong_wind.ogg" },
+            "glass_break": { name: "အိုးခွက်/မှန်ကွဲသံ", url: "https://actions.google.com/sounds/v1/impacts/glass_shatter.ogg" },
+            "rain": { name: "မိုးရွာသံ", url: "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg" },
+            "thunder": { name: "မိုးခြိမ်းသံ", url: "https://actions.google.com/sounds/v1/weather/thunder_crack.ogg" },
+            "footsteps": { name: "ခြေသံ", url: "https://actions.google.com/sounds/v1/foley/footsteps_on_leaves.ogg" },
+            "birds": { name: "ငှက်အော်သံ", url: "https://actions.google.com/sounds/v1/animals/birds_forest_morning.ogg" },
+            "door_creak": { name: "တံခါးဂျိသံ", url: "https://actions.google.com/sounds/v1/doors/creaking_wooden_door.ogg" },
+            "explosion": { name: "ပေါက်ကွဲသံ", url: "https://actions.google.com/sounds/v1/explosions/explosion_large.ogg" },
+            "water_splash": { name: "ရေပက်သံ", url: "https://actions.google.com/sounds/v1/water/water_splash.ogg" },
+            "ghost": { name: "ခြောက်ခြားဖွယ်အသံ", url: "https://actions.google.com/sounds/v1/horror/ghost_whisper.ogg" },
+            "magic": { name: "မှော်အသံ", url: "https://actions.google.com/sounds/v1/magic/wand_sparkle.ogg" },
+            "crowd": { name: "လူအုပ်သံ", url: "https://actions.google.com/sounds/v1/crowds/light_crowd_noise.ogg" }
+        };
+
+        // State
+        let currentStep = 1;
+        let selectedVoiceId = MALE_VOICES[0].id;
+        let scriptDataObj = null;
+        let generatedScenes = [];
+        let activePreviewAudio = null;
+        let activePreviews = {}; 
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            renderVoiceOptions();
+            updateStepper();
+        });
+
+        // Utils
+        const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        
+        function showError(msg) {
+            document.getElementById('error-text').innerText = msg;
+            document.getElementById('error-message').classList.remove('hidden');
+            document.getElementById('error-message').classList.add('flex');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        function hideError() {
+            document.getElementById('error-message').classList.add('hidden');
+            document.getElementById('error-message').classList.remove('flex');
+        }
+        function showLoading(viewId, text) {
+            const el = document.getElementById(`loading-${viewId}`);
+            if(el) el.style.display = 'flex';
+            if(text) {
+                const textEl = document.getElementById(`loading-text-${viewId}`);
+                if(textEl) textEl.innerText = text;
+            }
+        }
+        function hideLoading(viewId) {
+            const el = document.getElementById(`loading-${viewId}`);
+            if(el) el.style.display = 'none';
+        }
+        function showView(step) {
+            currentStep = step;
+            document.getElementById('view-1').classList.add('hidden');
+            document.getElementById('view-2').classList.add('hidden');
+            document.getElementById('view-3').classList.add('hidden');
+            document.getElementById(`view-${step}`).classList.remove('hidden');
+            updateStepper();
+            hideError();
+            if(activePreviewAudio) {
+                activePreviewAudio.pause();
+                activePreviewAudio = null;
+            }
+            // Stop any playing scene previews
+            Object.keys(activePreviews).forEach(k => togglePreview(k));
+        }
+
+        function updateStepper() {
+            const steps = [ { num: 1, text: "ဇာတ်ညွှန်းရေးရန်" }, { num: 2, text: "ပြင်ဆင်ရန်" }, { num: 3, text: "အခန်းများဒေါင်းလုဒ်" } ];
+            const container = document.getElementById('stepper');
+            container.innerHTML = '';
+            
+            steps.forEach((s, i) => {
+                const isPast = currentStep > s.num;
+                const isActive = currentStep >= s.num;
+                let iconHtml = isPast ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>` : `<span>${s.num}.</span>`;
+                
+                container.innerHTML += `
+                    <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-colors ${isActive ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20' : 'text-slate-500'}">
+                        ${iconHtml}
+                        ${s.text}
+                    </div>
+                `;
+                
+                if (i < steps.length - 1) {
+                    container.innerHTML += `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-700"><path d="m9 18 6-6-6-6"/></svg>`;
+                }
+            });
+        }
+
+        async function fetchWithRetry(url, options, maxRetries = 4) {
+            const delays = [1000, 2000, 4000, 8000];
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await wait(delays[i]);
+                }
+            }
+        }
+
+        const pcmToWav = (pcmData, sampleRate = 24000) => {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const blockAlign = numChannels * (bitsPerSample / 8);
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmData.length * 2;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+            };
+
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            for (let i = 0; i < pcmData.length; i++) view.setInt16(44 + i * 2, pcmData[i], true);
+            return new Blob([buffer], { type: 'audio/wav' });
+        };
+
+        // API Calls
+        async function generateScript(prompt, durationKey) {
+            const durConfig = DURATIONS[durationKey];
+            const sfxKeysList = Object.keys(SFX_LIBRARY).join(", ");
+            const systemInstruction = `
+                သင်သည် အလွန်ကျွမ်းကျင်သော ဇာတ်လမ်းပြောပြသူ (Storyteller) ဖြစ်သည်။ အသုံးပြုသူ၏ ဇာတ်လမ်းအကြမ်းကို အခြေခံ၍ လူများစိတ်ဝင်စားစွာ နားဆင်နိုင်မည့် ဇာတ်ညွှန်းတစ်ခု ရေးသားပေးပါ။
+                လိုက်နာရမည့် အချက်များ:
+                ၁။ အစ: "ယနေ့တင်ဆက်ပေးချင်တဲ့ ဇာတ်လမ်းလေးကတော့ [ဇာတ်လမ်းအမည်] ပါပဲခင်ဗျာ..." ဟု စတင်ပါ။
+                ၂။ အဆုံး: "ကဲ... နောက်ထပ်လည်း စိတ်ဝင်စားစရာ ဇာတ်လမ်းလေးတွေကို စောင့်မျှော်အားပေးကြပါဦးခင်ဗျာ" ဟု အဆုံးသတ်ပါ။
+                ၃။ အသံထွက်ဖတ်ပြရာတွင် ချောမွေ့စေရန် သဘာဝကျသော စကားပြောဟန် ဖြင့် ရေးသားပါ။
+                ၄။ ဤဇာတ်လမ်းသည် စာလုံးရေ ${durConfig.words} လုံးခန့်ပြည့်အောင် ရေးသားပါ။
+                ၅။ ဇာတ်လမ်းကို အပိုင်း (Scenes) ${durConfig.scenes} ပိုင်း တိတိကျကျ ခွဲပါ။
+                ၆။ အခန်းတိုင်းအတွက် အသင့်တော်ဆုံး Sound Effect (SFX) ကို ရွေးချယ်ပါ။ ရွေးချယ်နိုင်သော SFX များ: [${sfxKeysList}]
+
+                အောက်ပါ JSON format ဖြင့်သာ ပြန်ကြားပေးပါ:
+                {
+                "title": "ဇာတ်လမ်းအမည်",
+                "scenes": [
+                    { "narration": "စကားပြောမည့် မြန်မာစာသား", "image_prompt": "Cinematic, highly detailed English prompt for image generation", "sfx": "chosen_sfx_key" }
+                ]
+                }
+            `;
+
+            const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] },
+                    generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
+                })
+            });
+            
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) throw new Error("ဇာတ်ညွှန်းဖန်တီးမှု မအောင်မြင်ပါ။");
+            const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+            return JSON.parse(cleanText);
+        }
+
+        async function generateImage(prompt) {
+            const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    instances: { prompt: prompt + ", vivid lighting, highly detailed, cinematic shot, hyperrealistic" },
+                    parameters: { sampleCount: 1 }
+                })
+            });
+            if (!data?.predictions?.[0]?.bytesBase64Encoded) throw new Error("Image Failed");
+            return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+        }
+
+        async function generateAudio(text, voiceName) {
+            const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: text }] }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } } }
+                    }
+                })
+            });
+            
+            const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+            if (!inlineData || !inlineData.data) throw new Error("Audio Failed");
+            
+            const binaryString = atob(inlineData.data);
+            const pcmData = new Int16Array(binaryString.length / 2);
+            for (let i = 0; i < pcmData.length; i++) {
+                pcmData[i] = (binaryString.charCodeAt(i * 2 + 1) << 8) | binaryString.charCodeAt(i * 2);
+            }
+            return URL.createObjectURL(pcmToWav(pcmData));
+        }
+
+        // Render Functions
+        function renderVoiceOptions() {
+            const container = document.getElementById('voiceOptions');
+            container.innerHTML = '';
+            MALE_VOICES.forEach(voice => {
+                const isSelected = selectedVoiceId === voice.id;
+                const div = document.createElement('div');
+                div.className = `group flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-300 ${isSelected ? 'bg-indigo-500/20 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]' : 'bg-slate-900/40 border-slate-700 hover:border-slate-500 hover:bg-slate-800/60'}`;
+                div.onclick = () => { selectedVoiceId = voice.id; renderVoiceOptions(); };
+                
+                div.innerHTML = `
+                    <span class="text-sm font-medium ${isSelected ? 'text-indigo-200' : 'text-slate-300'}">${voice.name}</span>
+                    <button onclick="previewVoice(event, '${voice.id}')" class="p-2 rounded-full transition-colors ${isSelected ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300 group-hover:bg-slate-600'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-0.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderScriptReview() {
+            document.getElementById('scriptTitle').innerText = scriptDataObj.title;
+            const container = document.getElementById('scenesContainer');
+            container.innerHTML = '';
+            
+            let sfxOptionsHtml = '';
+            for (const [key, val] of Object.entries(SFX_LIBRARY)) {
+                sfxOptionsHtml += `<option value="${key}" class="bg-slate-800">${val.name}</option>`;
+            }
+
+            scriptDataObj.scenes.forEach((scene, idx) => {
+                const sfxKey = SFX_LIBRARY[scene.sfx] ? scene.sfx : 'none';
+                const div = document.createElement('div');
+                div.className = "bg-slate-900/60 p-5 rounded-2xl border border-slate-700 hover:border-slate-600 transition-colors group";
+                div.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <span class="text-xs font-bold px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/20 self-start">Scene ${idx + 1}</span>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-400 ml-1"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                            <select onchange="updateSceneSfx(${idx}, this.value)" class="bg-transparent text-xs text-slate-300 outline-none cursor-pointer pr-2">
+                                ${sfxOptionsHtml.replace(`value="${sfxKey}"`, `value="${sfxKey}" selected`)}
+                            </select>
+                        </div>
+                    </div>
+                    <textarea onchange="updateSceneText(${idx}, this.value)" class="w-full bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-slate-200 outline-none resize-none h-24 leading-relaxed focus:border-indigo-500/50 focus:bg-slate-800 transition-all text-sm">${scene.narration}</textarea>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateSceneSfx(idx, val) { scriptDataObj.scenes[idx].sfx = val; }
+        function updateSceneText(idx, val) { scriptDataObj.scenes[idx].narration = val; }
+
+        function renderFinalScenesGrid() {
+            const container = document.getElementById('finalScenesContainer');
+            container.innerHTML = '';
+            
+            for(let i=0; i<scriptDataObj.scenes.length; i++) {
+                const div = document.createElement('div');
+                div.className = "bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-700/50 flex flex-col group relative";
+                div.id = `scene-card-${i}`;
+                container.appendChild(div);
+
+                if(!generatedScenes[i]) {
+                    // Skeleton/Loading state
+                    div.innerHTML = `
+                        <div class="relative h-48 bg-slate-800 flex items-center justify-center">
+                            <div class="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center z-20">
+                                <div class="loader-small mb-2 border-indigo-400 border-l-transparent"></div>
+                                <span class="text-sm font-bold text-indigo-300 animate-pulse">ဖန်တီးနေပါသည်...</span>
+                            </div>
+                        </div>
+                        <div class="p-4 flex-1 flex flex-col gap-3">
+                            <div class="h-3 bg-slate-800 rounded animate-pulse w-full"></div>
+                            <div class="h-3 bg-slate-800 rounded animate-pulse w-5/6"></div>
+                            <div class="h-3 bg-slate-800 rounded animate-pulse w-2/3"></div>
+                        </div>
+                    `;
+                } else {
+                    updateSceneCard(i);
+                }
+            }
+        }
+
+        function updateSceneCard(idx) {
+            const card = document.getElementById(`scene-card-${idx}`);
+            const scene = generatedScenes[idx];
+            if(!card || !scene) return;
+
+            const hasAudio = !!scene.audio;
+
+            card.innerHTML = `
+                <div id="preview-area-${idx}" class="relative h-48 overflow-hidden bg-black flex items-center justify-center">
+                    <img id="img-${idx}" src="${scene.image}" alt="Scene ${idx+1}" class="w-full h-full object-cover transition-transform duration-[10000ms] scale-100" />
+                    
+                    <button id="regen-btn-${idx}" onclick="regenerateSceneImage(${idx})" class="absolute top-3 right-3 bg-slate-900/80 hover:bg-indigo-600 backdrop-blur-sm p-2 rounded-full text-slate-200 border border-white/10 z-10 transition-colors shadow-lg" title="ပုံအသစ်ပြန်ဖန်တီးမည်">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </button>
+
+                    <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-slate-200 border border-white/10 z-10">Scene ${idx + 1}</div>
+                    
+                    <div id="recording-overlay-${idx}" class="hidden absolute inset-0 bg-black/80 flex-col items-center justify-center z-20">
+                        <div class="loader-small mb-2 border-emerald-400 border-l-transparent"></div>
+                        <span class="text-sm font-bold text-emerald-400 animate-pulse">ဗီဒီယို ဖန်တီးနေပါသည်...</span>
+                    </div>
+                    
+                    <button id="play-btn-${idx}" onclick="togglePreview(${idx})" class="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/10 transition-colors group-hover:opacity-100 opacity-0 z-10" ${!hasAudio ? 'disabled' : ''}>
+                        <div class="w-14 h-14 bg-indigo-500/80 rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg transform hover:scale-110 transition-transform">
+                            <svg id="play-icon-${idx}" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white ml-1"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                        </div>
+                    </button>
+                </div>
+
+                <div id="video-area-${idx}" class="hidden relative h-48 bg-black">
+                    <video id="video-player-${idx}" controls class="w-full h-full object-contain"></video>
+                    <div class="absolute top-3 left-3 bg-emerald-500/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-white z-10">အဆင်သင့်ဖြစ်ပါပြီ</div>
+                </div>
+                
+                <div class="p-4 flex-1 flex flex-col justify-between gap-4">
+                    <p class="text-sm text-slate-300 line-clamp-3 leading-relaxed">${scene.text}</p>
+                    <div class="flex flex-col gap-2 mt-auto">
+                        ${!hasAudio ? `<span class="text-xs text-amber-400 text-center mb-1">အသံဖန်တီးမှု Error ဖြစ်ခဲ့ပါသည်။</span>` : ''}
+                        <button id="action-btn-${idx}" onclick="generateSceneVideo(${idx})" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-medium rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-colors text-sm" ${!hasAudio ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
+                            ဗီဒီယိုလုပ်မည်
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Action Handlers
+        async function previewVoice(e, voiceId) {
+            if(e) e.stopPropagation();
+            hideError();
+            const player = document.getElementById('globalAudioPlayer');
+            try {
+                showLoading(1, "အသံနမူနာ ဆွဲယူနေပါသည်...");
+                // Simplified text to avoid TTS parsing bugs
+                const url = await generateAudio("မင်္ဂလာပါ။ ဇာတ်လမ်းကောင်းလေးတစ်ပုဒ် တင်ဆက်ပေးပါရစေ။", voiceId);
+                player.src = url;
+                player.play();
+            } catch (err) {
+                console.error(err);
+                showError("အသံစမ်းသပ်မှု မအောင်မြင်ပါ။ Network အခက်အခဲ ဖြစ်နိုင်ပါသည်။");
+            } finally {
+                hideLoading(1);
+            }
+        }
+
+        async function handleGenerateScript() {
+            const input = document.getElementById('storyInput').value;
+            const dur = document.getElementById('durationSelect').value;
+            if(!input.trim()) return showError("ဇာတ်လမ်းအကြမ်းဖျင်းကို ထည့်သွင်းပေးပါ။");
+            
+            try {
+                hideError();
+                showLoading(1, "ဇာတ်ညွှန်း ရေးသားနေပါသည်...");
+                scriptDataObj = await generateScript(input, dur);
+                renderScriptReview();
+                showView(2);
+            } catch (err) {
+                showError("ဇာတ်ညွှန်းဖန်တီးခြင်း မအောင်မြင်ပါ။ ဇာတ်လမ်းကို အနည်းငယ်ပြင်၍ ပြန်စမ်းကြည့်ပါ။");
+            } finally {
+                hideLoading(1);
+            }
+        }
+
+        // Parallel Asset Generation with immediate UI feedback
+        async function handleGenerateAssets() {
+            hideError();
+            generatedScenes = new Array(scriptDataObj.scenes.length).fill(null);
+            
+            // Switch to view 3 immediately and show skeletons
+            showView(3);
+            renderFinalScenesGrid();
+
+            // Generate scene by scene (Wait for each to avoid 429 too many requests, but update UI immediately)
+            for (let i = 0; i < scriptDataObj.scenes.length; i++) {
+                const scene = scriptDataObj.scenes[i];
+                const sfxKey = SFX_LIBRARY[scene.sfx] ? scene.sfx : "none";
+                
+                try {
+                    // Fetch audio & image in parallel for THIS scene
+                    const [audioUrl, imgUrl] = await Promise.all([
+                        generateAudio(scene.narration, selectedVoiceId).catch(e => { console.error('Audio fail:',e); return null; }),
+                        generateImage(scene.image_prompt).catch(e => { console.error('Img fail:',e); return 'https://placehold.co/1280x720/1a1a1a/FFFFFF/png?text=Image+Generation+Failed'; })
+                    ]);
+                    
+                    generatedScenes[i] = {
+                        text: scene.narration,
+                        image: imgUrl,
+                        audio: audioUrl,
+                        sfx_url: SFX_LIBRARY[sfxKey].url
+                    };
+                } catch(e) {
+                    generatedScenes[i] = {
+                        text: scene.narration,
+                        image: 'https://placehold.co/1280x720/1a1a1a/FFFFFF/png?text=Error',
+                        audio: null,
+                        sfx_url: SFX_LIBRARY[sfxKey].url
+                    };
+                }
+                
+                // Refresh this specific card immediately
+                updateSceneCard(i);
+            }
+        }
+
+        // Image Regeneration
+        async function regenerateSceneImage(idx) {
+            if(activePreviews[idx]) togglePreview(idx); // Stop audio if playing
+            
+            const btn = document.getElementById(`regen-btn-${idx}`);
+            const imgEl = document.getElementById(`img-${idx}`);
+            
+            btn.innerHTML = `<div class="loader-small" style="width:14px; height:14px; border-width:2px; border-left-color:white; border-color:rgba(255,255,255,0.2);"></div>`;
+            btn.disabled = true;
+
+            try {
+                const prompt = scriptDataObj.scenes[idx].image_prompt;
+                const newImgUrl = await generateImage(prompt);
+                generatedScenes[idx].image = newImgUrl;
+                imgEl.src = newImgUrl;
+            } catch(err) {
+                alert(`အခန်း ${idx+1} ပုံဖန်တီးမှု မအောင်မြင်ပါ။ နောက်တစ်ကြိမ် ကြိုးစားပါ။`);
+            } finally {
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
+                btn.disabled = false;
+            }
+        }
+
+        // Preview Logic
+        function togglePreview(idx) {
+            const scene = generatedScenes[idx];
+            const imgEl = document.getElementById(`img-${idx}`);
+            const iconEl = document.getElementById(`play-icon-${idx}`);
+            const btnEl = document.getElementById(`play-btn-${idx}`);
+            
+            if(activePreviews[idx]) {
+                // Stop
+                activePreviews[idx].voice.pause();
+                if(activePreviews[idx].sfx) activePreviews[idx].sfx.pause();
+                delete activePreviews[idx];
+                imgEl.classList.replace('scale-110', 'scale-100');
+                iconEl.innerHTML = `<polygon points="6 3 20 12 6 21 6 3"/>`;
+                iconEl.classList.replace('w-4', 'w-6');
+                iconEl.classList.replace('h-4', 'h-6');
+                iconEl.classList.remove('bg-white', 'rounded-sm');
+                btnEl.classList.remove('opacity-100');
+            } else {
+                // Stop others
+                Object.keys(activePreviews).forEach(k => togglePreview(k));
+                
+                // Play
+                if(!scene.audio) return;
+                const voice = new Audio(scene.audio);
+                let sfx = null;
+                if(scene.sfx_url) {
+                    sfx = new Audio(scene.sfx_url);
+                    sfx.volume = 0.3;
+                    sfx.play().catch(e=>{});
+                }
+                voice.play();
+                activePreviews[idx] = { voice, sfx };
+                
+                imgEl.classList.replace('scale-100', 'scale-110');
+                iconEl.innerHTML = '';
+                iconEl.classList.add('bg-white', 'rounded-sm', 'w-4', 'h-4');
+                iconEl.classList.remove('w-6', 'h-6');
+                btnEl.classList.add('opacity-100');
+                
+                voice.onended = () => {
+                    if(activePreviews[idx]) togglePreview(idx); // auto stop
+                };
+            }
+        }
+
+        // Scene Video Generation
+        async function generateSceneVideo(idx) {
+            const formatKey = document.getElementById('formatSelect').value;
+            const targetFormat = VIDEO_FORMATS[formatKey];
+            const scene = generatedScenes[idx];
+            
+            if(activePreviews[idx]) togglePreview(idx);
+            
+            document.getElementById(`recording-overlay-${idx}`).classList.remove('hidden');
+            document.getElementById(`recording-overlay-${idx}`).classList.add('flex');
+            document.getElementById(`play-btn-${idx}`).classList.add('hidden');
+            const actionBtn = document.getElementById(`action-btn-${idx}`);
+            actionBtn.disabled = true;
+
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = targetFormat.width > targetFormat.height ? 1280 : 720;
+                canvas.height = targetFormat.width > targetFormat.height ? 720 : 1280;
+
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                await new Promise(r => { img.onload = r; img.src = scene.image; });
+
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const dest = audioCtx.createMediaStreamDestination();
+
+                const voice = new Audio(scene.audio);
+                voice.crossOrigin = "anonymous";
+                await new Promise(r => { voice.oncanplaythrough = r; voice.load(); });
+                const voiceSource = audioCtx.createMediaElementSource(voice);
+                voiceSource.connect(dest);
+
+                let sfx = null, sfxSource = null, sfxGain = null;
+                if (scene.sfx_url) {
+                    sfx = new Audio(scene.sfx_url);
+                    sfx.crossOrigin = "anonymous";
+                    try {
+                        await new Promise((res) => { sfx.oncanplaythrough = res; sfx.onerror = res; sfx.src = scene.sfx_url; });
+                        sfxSource = audioCtx.createMediaElementSource(sfx);
+                        sfxGain = audioCtx.createGain();
+                        sfxGain.gain.value = 0.3; 
+                        sfxSource.connect(sfxGain);
+                        sfxGain.connect(dest);
+                    } catch(e) {}
+                }
+
+                const canvasStream = canvas.captureStream(30);
+                const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+                const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+                
+                const chunks = [];
+                recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                const recordingPromise = new Promise(res => { recorder.onstop = () => res(new Blob(chunks, { type: 'video/webm' })); });
+
+                recorder.start();
+                voice.play();
+                if (sfx) sfx.play().catch(e=>{});
+
+                await new Promise(resolveScene => {
+                    let isEnded = false;
+                    voice.onended = () => { isEnded = true; };
+
+                    const renderInterval = setInterval(() => {
+                        if (isEnded) {
+                            clearInterval(renderInterval);
+                            if(sfx) {
+                                sfxGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+                                setTimeout(() => sfx.pause(), 1000);
+                            }
+                            resolveScene();
+                            return;
+                        }
+                        
+                        const progress = voice.currentTime / (voice.duration || 1);
+                        
+                        ctx.fillStyle = "#000";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        const zoomAmount = 1 + (0.15 * progress); 
+                        if (img) {
+                            const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                            ctx.save();
+                            ctx.translate(canvas.width/2, canvas.height/2);
+                            ctx.scale(zoomAmount, zoomAmount);
+                            ctx.translate(-canvas.width/2, -canvas.height/2);
+                            const imgX = (canvas.width / 2) - (img.width / 2) * baseScale;
+                            const imgY = (canvas.height / 2) - (img.height / 2) * baseScale;
+                            ctx.drawImage(img, imgX, imgY, img.width * baseScale, img.height * baseScale);
+                            ctx.restore();
+                        }
+
+                        const gradient = ctx.createLinearGradient(0, canvas.height - 300, 0, canvas.height);
+                        gradient.addColorStop(0, "transparent");
+                        gradient.addColorStop(1, "rgba(0,0,0,0.85)");
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, canvas.height - 300, canvas.width, 300);
+
+                        ctx.font = `bold 40px sans-serif`;
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        
+                        const words = scene.text.split(' ');
+                        let line = '', lines = [];
+                        for (let n = 0; n < words.length; n++) {
+                            const testLine = line + words[n] + ' ';
+                            if (ctx.measureText(testLine).width > canvas.width * 0.8 && n > 0) {
+                                lines.push(line); line = words[n] + ' ';
+                            } else { line = testLine; }
+                        }
+                        lines.push(line);
+                        
+                        const visibleLines = lines.slice(-2);
+                        const lineHeight = 50;
+                        let startY = canvas.height - 40 - (visibleLines.length - 1) * lineHeight;
+                        
+                        visibleLines.forEach(l => {
+                            ctx.shadowColor = "black"; ctx.shadowBlur = 8; ctx.lineWidth = 4;
+                            ctx.strokeText(l, canvas.width / 2, startY);
+                            ctx.shadowBlur = 0; ctx.fillText(l, canvas.width / 2, startY);
+                            startY += lineHeight;
+                        });
+                    }, 1000 / 30); 
+                });
+
+                recorder.stop();
+                const blob = await recordingPromise;
+                const url = URL.createObjectURL(blob);
+                
+                document.getElementById(`preview-area-${idx}`).classList.add('hidden');
+                document.getElementById(`video-area-${idx}`).classList.remove('hidden');
+                document.getElementById(`video-player-${idx}`).src = url;
+                
+                actionBtn.disabled = false;
+                actionBtn.className = "w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-colors text-sm";
+                actionBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    ဒေါင်းလုဒ်လုပ်မည်
+                `;
+                actionBtn.onclick = () => downloadFile(url, `Scene_${idx+1}.webm`);
+
+                voiceSource.disconnect();
+                if (sfxSource) { sfxSource.disconnect(); sfxGain.disconnect(); }
+
+            } catch(e) {
+                alert("ဖန်တီးမှု မအောင်မြင်ပါ။");
+                document.getElementById(`recording-overlay-${idx}`).classList.add('hidden');
+                document.getElementById(`recording-overlay-${idx}`).classList.remove('flex');
+                document.getElementById(`play-btn-${idx}`).classList.remove('hidden');
+                actionBtn.disabled = false;
+            }
+        }
+
+        function downloadFile(url, filename) {
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); }, 100);
+        }
+
+        function resetApp() {
+            document.getElementById('storyInput').value = "";
+            scriptDataObj = null;
+            generatedScenes = [];
+            showView(1);
+        }
+    </script>
+</body>
+</html>
